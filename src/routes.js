@@ -1,6 +1,8 @@
 const { 
   postPredict, 
   postRegister,
+  loginUser,
+  fetchNutrients,
 } = require('../src/handler')
 
 const routes = [
@@ -12,14 +14,17 @@ const routes = [
   {
     method: 'GET',
     path: '/fetch-nutrients',
-    handler: (request, h) => {
-        return 'API akan memberikan data nutrisi ke client';
-    },
+    handler: fetchNutrients
   },
   {
     method: 'POST',
     path: '/register',
     handler: postRegister,
+  },
+  {
+    method: 'POST',
+    path: '/login',
+    handler: loginUser,
   },
   {
     method: '*',
