@@ -1,5 +1,7 @@
-const postPredict = require('../src/handler')
-const postRegister = require('../services/registerUser')
+const { 
+  postPredict, 
+  postRegister,
+} = require('../src/handler')
 
 const routes = [
   {

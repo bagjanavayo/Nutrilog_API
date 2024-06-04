@@ -31,20 +31,21 @@ async function postPredict(request, h){
 
 async function postRegister(request, h){
 
-  const id = crypto.randomUUID();
+  const user_id = crypto.randomUUID();
 
-  const data = {
-    name: 'isi nama user',
-    email: 'isi email user',
-    password: 'isi password user'
+  const data_user = {
+    "user_id": user_id,
+    "name": 'isi nama user',
+    "email": 'isi email user',
+    "password": 'isi password user'
   }
 
-  await registerUser(id, data)
+  await registerUser(user_id, data_user)
 
   const response = h.response({
     status: 'success',
     message: 'Registrasi user berhasil, data berhasil ditambahkan',
-    data
+    data_user
   })
   response.code(201);
   return response;
@@ -58,4 +59,4 @@ async function postRegister(request, h){
   }
 });*/
 
-module.exports = postPredict, postRegister;
+module.exports = {postPredict, postRegister};
