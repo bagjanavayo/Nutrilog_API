@@ -1,30 +1,52 @@
+require('dotenv').config();
 const storeData = require('../services/storeData')
 const registerUser = require('../services/registerUser')
 const crypto = require('crypto');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const { Firestore } = require('@google-cloud/firestore');
+const { userInfo } = require('os');
+
 
 async function postPredict(request, h){
+
+  const authorizationHeader = request.headers.authorization;
+
+  if (!authorizationHeader || !authorizationHeader.startsWith('Bearer ')) {
+      return h.response({
+        status: 'error',
+        message: 'Missing or invalid authorization header'
+      }).code(401);
+  }
+
+  const token = authorizationHeader.split(' ')[1];
+
+  const JWT_SECRET = process.env.JWT_SECRET;
+
+  const decodedToken = jwt.verify(token, JWT_SECRET)
+  const userId = decodedToken.user_id;
 
   const id = crypto.randomUUID();
   const date = new Date().toISOString();
   const dateCreated = date.slice(0,10);
 
-  const {food_name, carbohydrate, proteins, fat, calories} = request.query;
-
-
+  const {food_name, carbohydrate, proteins, fat, calories} = request.payload; //harusnya di body
+  
   const data = {
     "id": id,
-    "user_id": 'user_id',
+    "user_id": userId, //dari token
     "food_name": food_name,
     "carbohydrate": carbohydrate,
     "proteins": proteins,
     "fat": fat,
     "calories": calories,
     "created_at": date,
-    "dateCreated": dateCreated
+    "dateCreated": dateCreated //ga dikeluarin ke response
   }
 
   await storeData(id, data)
+
+  delete(data.dateCreated);
 
   const response = h.response({
     status: 'success',
@@ -37,15 +59,19 @@ async function postPredict(request, h){
 
 async function postRegister(request, h){
 
-  const {name, email, password} = request.query
+  const {name, email, password} = request.payload //harusnya request body
 
   const user_id = crypto.randomUUID();
+  const token = crypto.randomUUID();
 
-  const data_user = {
+  const hashedPassword = await bcrypt.hash(password, 10)
+
+  const data_user = { //tambahin token
     "user_id": user_id,
     "name": name,
     "email": email,
-    "password": password
+    "password": hashedPassword, //harus di hash
+    "token": token
   }
 
   await registerUser(user_id, data_user)
@@ -59,22 +85,11 @@ async function postRegister(request, h){
 };
 
 async function loginUser(request, h){
-  const token = crypto.randomUUID();
 
   const db = new Firestore();
+  const {email, password} = request.payload;
 
-  const {email, password} = request.query;
-
-  let collectionRef = db.collection('user');
-
-  if (email) {
-    collectionRef = collectionRef.where('email', '==', email)
-  }
-
-  if (password) {
-    collectionRef = collectionRef.where('password', '==', password)
-  }
-
+  let collectionRef = db.collection('user').where('email', '==', email);
   const snapshot = await collectionRef.get(); 
 
   if (snapshot.empty) {
@@ -84,22 +99,36 @@ async function loginUser(request, h){
     }).code(400);
   }
 
-  snapshot.forEach(doc => {
-      data = {user_id: doc.id, ...doc.data(), token};
-      delete(data.password)
-  });
+  let userData
+  snapshot.forEach(doc=> {
+    userData = doc.data();
+    userData.id = doc.id;
+  })
 
+  const isValid = await bcrypt.compare(password, userData.password);
+  
+  if(!isValid){
+    return h.response({ 
+      status: 'error',
+      message: 'Email atau Password salah' 
+    }).code(400);
+  }
 
-  return h.response({
+  const token = jwt.sign({user_id: userData.id}, process.env.JWT_SECRET);
+
+  delete userData.password;
+  delete userData.id;
+
+  return h.response({ //tambahin token dari db user
     status: 'success',
     message: 'Berhasil Login',
-    data
+    data: {...userData, token}
   }).code(200);
 
 }
 
 async function fetchNutrients(request, h){
-  const {date} = request.query
+  const {date} = request.query //tambahin header request token //token -> user kemudian whre dengan date
 
   const db = new Firestore();
 
