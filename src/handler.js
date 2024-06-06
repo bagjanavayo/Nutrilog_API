@@ -62,7 +62,6 @@ async function postRegister(request, h){
   const {name, email, password} = request.payload //harusnya request body
 
   const user_id = crypto.randomUUID();
-  const token = crypto.randomUUID();
 
   const hashedPassword = await bcrypt.hash(password, 10)
 
@@ -71,7 +70,6 @@ async function postRegister(request, h){
     "name": name,
     "email": email,
     "password": hashedPassword, //harus di hash
-    "token": token
   }
 
   await registerUser(user_id, data_user)
@@ -130,9 +128,25 @@ async function loginUser(request, h){
 async function fetchNutrients(request, h){
   const {date} = request.query //tambahin header request token //token -> user kemudian whre dengan date
 
+  const authorizationHeader = request.headers.authorization;
+
+  if (!authorizationHeader || !authorizationHeader.startsWith('Bearer ')) {
+      return h.response({
+        status: 'error',
+        message: 'Missing or invalid authorization header'
+      }).code(401);
+  }
+
+  const token = authorizationHeader.split(' ')[1];
+
+  const JWT_SECRET = process.env.JWT_SECRET;
+
+  const decodedToken = jwt.verify(token, JWT_SECRET);
+  const userId = decodedToken.user_id;
+
   const db = new Firestore();
 
-  let collectionRef = db.collection('prediction');
+  let collectionRef = db.collection('prediction').where('user_id', '==', userId);
 
   if (date) {
     collectionRef = collectionRef.where('dateCreated', 'in', [date])
