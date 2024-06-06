@@ -53,20 +53,20 @@ async function postPredict(request, h){
     message: 'Data berhasil ditambahkan',
     data
   })
-  response.code(201);
+  response.code(200);
   return response;
 };
 
 async function postRegister(request, h){
 
-  const {name, email, password} = request.payload //harusnya request body
+  const {name, email, password} = request.payload
 
   const user_id = crypto.randomUUID();
 
   const hashedPassword = await bcrypt.hash(password, 10)
 
   const data_user = { //tambahin token
-    "user_id": user_id,
+    "id": user_id,
     "name": name,
     "email": email,
     "password": hashedPassword, //harus di hash
@@ -78,7 +78,7 @@ async function postRegister(request, h){
     status: 'success',
     message: 'Registrasi user berhasil, data berhasil ditambahkan',
   })
-  response.code(201);
+  response.code(200);
   return response;
 };
 
@@ -114,8 +114,7 @@ async function loginUser(request, h){
 
   const token = jwt.sign({user_id: userData.id}, process.env.JWT_SECRET);
 
-  delete userData.password;
-  delete userData.id;
+  delete userData.password; 
 
   return h.response({ //tambahin token dari db user
     status: 'success',
@@ -134,7 +133,7 @@ async function fetchNutrients(request, h){
       return h.response({
         status: 'error',
         message: 'Missing or invalid authorization header'
-      }).code(401);
+      }).code(400);
   }
 
   const token = authorizationHeader.split(' ')[1];
