@@ -13,7 +13,7 @@ const routes = [
   },
   {
     method: 'GET',
-    path: '/fetch-nutrients',
+    path: '/nutrients',
     handler: fetchNutrients
   },
   {
